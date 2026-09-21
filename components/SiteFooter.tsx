@@ -18,7 +18,7 @@ export function SiteFooter() {
             on the wall.
           </p>
           <p>
-            Made by{" "}
+            Made with ❤️ by{" "}
             <a
               href={AUTHOR_GITHUB}
               className="underline underline-offset-4 hover:text-[var(--ink)]"

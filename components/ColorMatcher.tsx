@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, type PointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
 import Link from "next/link";
 import clientShades from "@/data/client-shades.json";
 import {
@@ -40,6 +46,10 @@ function rankBoth(hex: string) {
   };
 }
 
+function sampleRadiusForPointer(pointerType: string) {
+  return pointerType === "touch" || pointerType === "pen" ? 7 : 3;
+}
+
 function EyedropperIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -75,8 +85,17 @@ export function ColorMatcher({
   const [hexField, setHexField] = useState(start);
   const [imageName, setImageName] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const draggingRef = useRef(false);
+  const sampleRadiusRef = useRef(3);
+  const coarseRef = useRef(false);
+  const pendingSampleRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
   const [hasImage, setHasImage] = useState(false);
-  const [picker, setPicker] = useState<{ x: number; y: number } | null>(null);
+  const [picker, setPicker] = useState<{
+    x: number;
+    y: number;
+    coarse: boolean;
+  } | null>(null);
 
   const applyHex = (next: string) => {
     const normalized = normalizeHex(next);
@@ -99,18 +118,67 @@ export function ColorMatcher({
     setB(String(Math.round(nb)));
   };
 
-  const sampleAt = (canvasX: number, canvasY: number) => {
+  const clientToCanvas = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const x = Math.min(
+      canvas.width - 1,
+      Math.max(0, ((clientX - rect.left) / rect.width) * canvas.width),
+    );
+    const y = Math.min(
+      canvas.height - 1,
+      Math.max(0, ((clientY - rect.top) / rect.height) * canvas.height),
+    );
+    return { x, y };
+  };
+
+  const sampleAt = (
+    canvasX: number,
+    canvasY: number,
+    radius = sampleRadiusRef.current,
+    coarse = false,
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
-    const sampled = sampleCanvasAverage(ctx, canvasX, canvasY, 3);
+    const sampled = sampleCanvasAverage(ctx, canvasX, canvasY, radius);
     if (sampled) applyHex(sampled);
     setPicker({
       x: (canvasX / canvas.width) * 100,
       y: (canvasY / canvas.height) * 100,
+      coarse,
     });
   };
+
+  const flushPendingSample = (force = false) => {
+    if (!pendingSampleRef.current) return;
+    if (!force && rafRef.current != null) return;
+    const run = () => {
+      rafRef.current = null;
+      const next = pendingSampleRef.current;
+      if (!next) return;
+      pendingSampleRef.current = null;
+      sampleAt(next.x, next.y, sampleRadiusRef.current, coarseRef.current);
+    };
+    if (force) {
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      run();
+      return;
+    }
+    rafRef.current = requestAnimationFrame(run);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const matches = useMemo(() => rankBoth(hex), [hex]);
   const hexSlug = hex.replace("#", "").toLowerCase();
@@ -130,20 +198,75 @@ export function ColorMatcher({
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       setHasImage(true);
       setImageName(file.name);
-      sampleAt(canvas.width / 2, canvas.height / 2);
+      sampleRadiusRef.current = 3;
+      coarseRef.current = false;
+      sampleAt(canvas.width / 2, canvas.height / 2, 3, false);
       URL.revokeObjectURL(url);
     };
     image.src = url;
   };
 
-  const onCanvasPointer = (event: PointerEvent<HTMLCanvasElement>) => {
+  const onCanvasPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((event.clientY - rect.top) / rect.height) * canvas.height;
-    sampleAt(x, y);
+    event.preventDefault();
+    draggingRef.current = true;
+    sampleRadiusRef.current = sampleRadiusForPointer(event.pointerType);
+    coarseRef.current = event.pointerType === "touch";
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic events may lack an active pointer id.
+    }
+    const point = clientToCanvas(event.clientX, event.clientY);
+    if (!point) return;
+    sampleAt(point.x, point.y, sampleRadiusRef.current, coarseRef.current);
+  };
+
+  const onCanvasPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!draggingRef.current) return;
+    const point = clientToCanvas(event.clientX, event.clientY);
+    if (!point) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    coarseRef.current = event.pointerType === "touch";
+    setPicker({
+      x: (point.x / canvas.width) * 100,
+      y: (point.y / canvas.height) * 100,
+      coarse: coarseRef.current,
+    });
+    pendingSampleRef.current = point;
+    flushPendingSample(false);
+  };
+
+  const endCanvasPointer = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    const canvas = canvasRef.current;
+    try {
+      if (canvas?.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Pointer may already be released.
+    }
+    const point = clientToCanvas(event.clientX, event.clientY);
+    if (point) {
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      pendingSampleRef.current = null;
+      sampleAt(
+        point.x,
+        point.y,
+        sampleRadiusRef.current,
+        event.pointerType === "touch",
+      );
+    } else {
+      flushPendingSample(true);
+    }
   };
 
   return (
@@ -241,25 +364,36 @@ export function ColorMatcher({
               </label>
               {hasImage ? (
                 <p className="mt-2 text-sm text-[var(--muted)]">
-                  Tap the photo to pick a colour
+                  Drag across the photo to pick a colour
                 </p>
               ) : null}
               <div className={`relative mt-3 ${hasImage ? "block" : "hidden"}`}>
                 <canvas
                   ref={canvasRef}
-                  onPointerDown={onCanvasPointer}
-                  className="h-auto max-h-64 w-full touch-none rounded-2xl border border-[var(--line)]"
+                  onPointerDown={onCanvasPointerDown}
+                  onPointerMove={onCanvasPointerMove}
+                  onPointerUp={endCanvasPointer}
+                  onPointerCancel={endCanvasPointer}
+                  className="h-auto max-h-64 w-full touch-none rounded-2xl border border-[var(--line)] cursor-crosshair"
                 />
                 {hasImage && picker ? (
                   <div
-                    className="pointer-events-none absolute -translate-x-1/2 -translate-y-[70%]"
+                    className={`pointer-events-none absolute -translate-x-1/2 ${
+                      picker.coarse
+                        ? "-translate-y-[120%]"
+                        : "-translate-y-[70%]"
+                    }`}
                     style={{ left: `${picker.x}%`, top: `${picker.y}%` }}
                   >
                     <span
-                      className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white bg-[var(--ink)] text-[var(--paper)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.55)] ring-2 ring-black/20"
+                      className={`flex items-center justify-center rounded-full border-2 border-white bg-[var(--ink)] text-[var(--paper)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.55)] ring-2 ring-black/20 ${
+                        picker.coarse ? "h-14 w-14" : "h-11 w-11"
+                      }`}
                       aria-hidden
                     >
-                      <EyedropperIcon className="h-5 w-5" />
+                      <EyedropperIcon
+                        className={picker.coarse ? "h-6 w-6" : "h-5 w-5"}
+                      />
                     </span>
                   </div>
                 ) : null}

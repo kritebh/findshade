@@ -1,69 +1,105 @@
-import Image from "next/image";
+import { ColorMatcher } from "@/components/ColorMatcher";
+import { DeltaEGuide } from "@/components/DeltaEGuide";
+import { JsonLd } from "@/components/JsonLd";
+import { catalog } from "@/lib/catalog";
+import { DEFAULT_OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/lib/site";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: `${SITE_NAME} — closest Asian Paints and Birla Opus colour from hex or photo`,
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: `${SITE_NAME} — closest Asian Paints and Birla Opus colour from hex or photo`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${SITE_NAME} — closest Asian Paints and Birla Opus colour from hex or photo`,
+    description: SITE_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
 
 export default function Home() {
+  const ap = catalog.brands["asian-paints"];
+  const bo = catalog.brands["birla-opus"];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="mx-auto w-full max-w-6xl px-5 py-12 md:py-16">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: SITE_NAME,
+          url: absoluteUrl("/"),
+          applicationCategory: "DesignApplication",
+          operatingSystem: "Any",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "INR",
+          },
+          description: SITE_DESCRIPTION,
+          isAccessibleForFree: true,
+          featureList: [
+            "Match hex and RGB to Asian Paints shade codes",
+            "Match hex and RGB to Birla Opus shade codes",
+            "Sample a colour from a photo",
+            "CIEDE2000 ranking",
+          ],
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "How do I find the closest Asian Paints or Birla Opus colour to a hex?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `Enter a hex or RGB value, or use the colour picker. ${SITE_NAME} ranks official Asian Paints and Birla Opus shades with CIEDE2000 and shows a shortlist. Always confirm with a physical sample.`,
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Can I match wall paint from a photo?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Upload a photo and tap the wall or object. Sampling runs in your browser. Phone cameras auto-white-balance, so treat the result as a starting point.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: `Is ${SITE_NAME} affiliated with Asian Paints or Birla Opus?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "No. It is an unofficial digital reference. Neither brand operates or endorses the site.",
+              },
+            },
+          ],
+        }}
+      />
+      <section className="max-w-3xl">
+        <h1 className="font-serif text-[2.35rem] leading-[1.05] tracking-[-0.03em] text-[var(--ink)] md:text-6xl">
+          Hex, photo, or RGB → the closest paint code.
+        </h1>
+        <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
+          {ap.count.toLocaleString()} Asian Paints and {bo.count.toLocaleString()}{" "}
+          Birla Opus shades. A shortlist, not a wall match.
+        </p>
+      </section>
+
+      <div className="mt-10">
+        <ColorMatcher />
+      </div>
+
+      <div className="mt-20">
+        <DeltaEGuide />
+      </div>
     </div>
   );
 }

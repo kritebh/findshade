@@ -22,7 +22,7 @@ export function getMatches(brand: BrandId, slug: string) {
   );
 }
 
-export function matchHex(hex: string, limit = 5) {
+export function matchHex(hex: string, limit = 4) {
   return {
     "asian-paints": rankShades(hex, shadesByBrand["asian-paints"], limit),
     "birla-opus": rankShades(hex, shadesByBrand["birla-opus"], limit),

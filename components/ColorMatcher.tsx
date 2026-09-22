@@ -5,9 +5,11 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
+  type DragEvent,
   type PointerEvent,
+  type ReactNode,
 } from "react";
-import Link from "next/link";
 import clientShades from "@/data/client-shades.json";
 import {
   hexToRgb,
@@ -17,8 +19,8 @@ import {
   sampleCanvasAverage,
 } from "@/lib/color";
 import type { BrandId, RankedMatch, Shade } from "@/lib/types";
+import { CopyButton } from "./CopyButton";
 import { MatchColumns } from "./MatchColumns";
-import { Disclaimer } from "./Disclaimer";
 
 const shades = clientShades as Pick<
   Shade,
@@ -41,13 +43,57 @@ const byBrand: Record<BrandId, typeof shades> = {
 
 function rankBoth(hex: string) {
   return {
-    "asian-paints": rankShades(hex, byBrand["asian-paints"] as Shade[], 5),
-    "birla-opus": rankShades(hex, byBrand["birla-opus"] as Shade[], 5),
+    "asian-paints": rankShades(hex, byBrand["asian-paints"] as Shade[], 4),
+    "birla-opus": rankShades(hex, byBrand["birla-opus"] as Shade[], 4),
   };
 }
 
 function sampleRadiusForPointer(pointerType: string) {
   return pointerType === "touch" || pointerType === "pen" ? 7 : 3;
+}
+
+function eyedropperSupported() {
+  return "EyeDropper" in window;
+}
+
+function subscribeEyedropper() {
+  return () => {};
+}
+
+const iconButton =
+  "inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] transition-colors duration-200 hover:bg-white";
+
+function Icon({
+  children,
+  className = "h-4 w-4",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+function ImageGlyph() {
+  return (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10" r="1.5" />
+      <path d="m21 15-5-5L5 19" />
+    </>
+  );
 }
 
 function EyedropperIcon({ className }: { className?: string }) {
@@ -83,7 +129,11 @@ export function ColorMatcher({
   const [g, setG] = useState(String(startRgb.g));
   const [b, setB] = useState(String(startRgb.b));
   const [hexField, setHexField] = useState(start);
-  const [imageName, setImageName] = useState<string | null>(null);
+  const canEyedrop = useSyncExternalStore(
+    subscribeEyedropper,
+    eyedropperSupported,
+    () => false,
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const draggingRef = useRef(false);
   const sampleRadiusRef = useRef(3);
@@ -180,6 +230,21 @@ export function ColorMatcher({
     };
   }, []);
 
+  const pickScreen = async () => {
+    const EyeDropperCtor = (
+      window as Window & {
+        EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> };
+      }
+    ).EyeDropper;
+    if (!EyeDropperCtor) return;
+    try {
+      const result = await new EyeDropperCtor().open();
+      applyHex(result.sRGBHex);
+    } catch {
+      // The user dismissed the eyedropper.
+    }
+  };
+
   const matches = useMemo(() => rankBoth(hex), [hex]);
   const hexSlug = hex.replace("#", "").toLowerCase();
 
@@ -197,7 +262,6 @@ export function ColorMatcher({
       if (!ctx) return;
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       setHasImage(true);
-      setImageName(file.name);
       sampleRadiusRef.current = 3;
       coarseRef.current = false;
       sampleAt(canvas.width / 2, canvas.height / 2, 3, false);
@@ -271,146 +335,183 @@ export function ColorMatcher({
 
   return (
     <div id="matcher" className="scroll-mt-24 space-y-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <div className="overflow-hidden rounded-[2rem] border border-[var(--line)] bg-white/75 shadow-[0_28px_80px_-40px_rgba(40,24,8,0.45)] backdrop-blur-sm">
-        <div className="grid md:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-          <div className="relative min-h-56 md:min-h-[22rem]">
-            <div className="absolute inset-0" style={{ backgroundColor: hex }} />
-            <p className="absolute right-4 bottom-4 font-mono text-sm text-white/90 mix-blend-difference">
-              {hex}
-            </p>
-          </div>
-          <div className="space-y-5 p-5 sm:p-7">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="block text-base">
-                <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-                  Hex
-                </span>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <label className="relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-full border border-[var(--line)] shadow-inner">
-                    <span
-                      className="absolute inset-0"
-                      style={{ backgroundColor: hex }}
-                      aria-hidden
-                    />
-                    <input
-                      type="color"
-                      value={hex}
-                      onChange={(event) => applyHex(event.target.value)}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                      aria-label="Colour picker"
-                    />
-                  </label>
-                  <input
-                    value={hexField}
-                    onChange={(event) => {
-                      setHexField(event.target.value);
-                      applyHex(event.target.value);
-                    }}
-                    className="min-w-0 flex-1 rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-3 py-2.5 font-mono text-base"
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    autoCorrect="off"
+      <div className="w-full overflow-hidden rounded-[2rem] border border-[var(--line)] bg-white/75 shadow-[0_28px_80px_-40px_rgba(40,24,8,0.45)] backdrop-blur-sm">
+        {hasImage ? null : (
+          <label
+            className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 bg-[var(--ink)] px-5 py-8 text-base font-medium text-[var(--paper)] sm:min-h-44"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event: DragEvent<HTMLLabelElement>) => {
+              event.preventDefault();
+              const file = event.dataTransfer.files?.[0];
+              if (file?.type.startsWith("image/")) onImage(file);
+            }}
+          >
+            <Icon className="h-6 w-6">
+              <ImageGlyph />
+            </Icon>
+            Upload image
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onImage(file);
+              }}
+            />
+          </label>
+        )}
+        <div
+          className={
+            hasImage
+              ? "md:grid md:grid-cols-[auto_minmax(18rem,1fr)] md:items-center"
+              : undefined
+          }
+        >
+        <div
+          className={
+            hasImage
+              ? "flex justify-center px-4 pt-4 md:justify-start md:py-5 md:pr-0 md:pl-5"
+              : "hidden"
+          }
+        >
+          <div className="relative w-fit max-w-full">
+            <canvas
+              ref={canvasRef}
+              onPointerDown={onCanvasPointerDown}
+              onPointerMove={onCanvasPointerMove}
+              onPointerUp={endCanvasPointer}
+              onPointerCancel={endCanvasPointer}
+              className="block h-auto max-h-72 w-auto max-w-full touch-none cursor-crosshair md:max-h-80 md:max-w-[42rem]"
+            />
+            {hasImage && picker ? (
+              <div
+                className={`pointer-events-none absolute -translate-x-1/2 ${
+                  picker.coarse ? "-translate-y-[120%]" : "-translate-y-[70%]"
+                }`}
+                style={{ left: `${picker.x}%`, top: `${picker.y}%` }}
+              >
+                <span
+                  className={`flex items-center justify-center rounded-full border-2 border-white bg-[var(--ink)] text-[var(--paper)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.55)] ring-2 ring-black/20 ${
+                    picker.coarse ? "h-14 w-14" : "h-11 w-11"
+                  }`}
+                  aria-hidden
+                >
+                  <EyedropperIcon
+                    className={picker.coarse ? "h-6 w-6" : "h-5 w-5"}
                   />
-                </div>
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {(
-                  [
-                    ["R", r, setR],
-                    ["G", g, setG],
-                    ["B", b, setB],
-                  ] as const
-                ).map(([label, value, setter]) => (
-                  <label key={label} className="block text-base">
-                    <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-                      {label}
-                    </span>
-                    <input
-                      inputMode="numeric"
-                      value={value}
-                      onChange={(event) => {
-                        setter(event.target.value);
-                        const nr =
-                          label === "R" ? Number(event.target.value) : Number(r);
-                        const ng =
-                          label === "G" ? Number(event.target.value) : Number(g);
-                        const nb =
-                          label === "B" ? Number(event.target.value) : Number(b);
-                        if ([nr, ng, nb].every((n) => Number.isFinite(n))) {
-                          applyRgb(nr, ng, nb);
-                        }
-                      }}
-                      className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-2 py-2.5 font-mono text-base"
-                    />
-                  </label>
-                ))}
+            ) : null}
+          </div>
+        </div>
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="block min-w-44 flex-1 text-base">
+              <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                Hex
+              </span>
+              <div className="mt-1.5 flex items-center gap-2">
+                <label className="relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-full border border-[var(--line)] shadow-inner">
+                  <span
+                    className="absolute inset-0"
+                    style={{ backgroundColor: hex }}
+                    aria-hidden
+                  />
+                  <input
+                    type="color"
+                    value={hex}
+                    onChange={(event) => applyHex(event.target.value)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    aria-label="Colour picker"
+                  />
+                </label>
+                <input
+                  value={hexField}
+                  onChange={(event) => {
+                    setHexField(event.target.value);
+                    applyHex(event.target.value);
+                  }}
+                  aria-label="Hex"
+                  className="min-w-0 flex-1 rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-3 py-2.5 font-mono text-base"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
               </div>
             </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-                Photo
-              </p>
-              <label className="mt-2 inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full bg-[var(--ink)] px-5 py-2.5 text-base font-medium text-[var(--paper)] shadow-[0_10px_24px_-12px_rgba(26,22,16,0.7)] transition-transform duration-200 hover:-translate-y-px sm:w-auto sm:text-sm">
-                {imageName ?? "Choose image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) onImage(file);
-                  }}
-                />
-              </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ["R", r, setR],
+                  ["G", g, setG],
+                  ["B", b, setB],
+                ] as const
+              ).map(([label, value, setter]) => (
+                <label key={label} className="block w-16 text-base sm:w-[4.5rem]">
+                  <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                    {label}
+                  </span>
+                  <input
+                    inputMode="numeric"
+                    value={value}
+                    aria-label={label}
+                    onChange={(event) => {
+                      setter(event.target.value);
+                      const nr =
+                        label === "R" ? Number(event.target.value) : Number(r);
+                      const ng =
+                        label === "G" ? Number(event.target.value) : Number(g);
+                      const nb =
+                        label === "B" ? Number(event.target.value) : Number(b);
+                      if ([nr, ng, nb].every((n) => Number.isFinite(n))) {
+                        applyRgb(nr, ng, nb);
+                      }
+                    }}
+                    className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-2 py-2.5 font-mono text-base"
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 pb-0.5">
               {hasImage ? (
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  Drag across the photo to pick a colour
-                </p>
+                <label className={iconButton}>
+                  <span className="sr-only">Change image</span>
+                  <Icon>
+                    <ImageGlyph />
+                  </Icon>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) onImage(file);
+                    }}
+                  />
+                </label>
               ) : null}
-              <div className={`relative mt-3 ${hasImage ? "block" : "hidden"}`}>
-                <canvas
-                  ref={canvasRef}
-                  onPointerDown={onCanvasPointerDown}
-                  onPointerMove={onCanvasPointerMove}
-                  onPointerUp={endCanvasPointer}
-                  onPointerCancel={endCanvasPointer}
-                  className="h-auto max-h-64 w-full touch-none rounded-2xl border border-[var(--line)] cursor-crosshair"
-                />
-                {hasImage && picker ? (
-                  <div
-                    className={`pointer-events-none absolute -translate-x-1/2 ${
-                      picker.coarse
-                        ? "-translate-y-[120%]"
-                        : "-translate-y-[70%]"
-                    }`}
-                    style={{ left: `${picker.x}%`, top: `${picker.y}%` }}
-                  >
-                    <span
-                      className={`flex items-center justify-center rounded-full border-2 border-white bg-[var(--ink)] text-[var(--paper)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.55)] ring-2 ring-black/20 ${
-                        picker.coarse ? "h-14 w-14" : "h-11 w-11"
-                      }`}
-                      aria-hidden
-                    >
-                      <EyedropperIcon
-                        className={picker.coarse ? "h-6 w-6" : "h-5 w-5"}
-                      />
-                    </span>
-                  </div>
-                ) : null}
-              </div>
+              {canEyedrop ? (
+                <button
+                  type="button"
+                  className={iconButton}
+                  aria-label="Sample from screen"
+                  onClick={pickScreen}
+                >
+                  <EyedropperIcon className="h-4 w-4" />
+                </button>
+              ) : null}
+              <CopyButton
+                value={`/hex/${hexSlug}`}
+                label="Copy link"
+                absolute
+                icon="link"
+              />
+              <CopyButton value={hex} label="Copy hex" />
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Link
-          href={`/hex/${hexSlug}`}
-          className="text-sm text-[var(--muted)] underline decoration-[var(--line)] underline-offset-4 transition-colors duration-200 hover:text-[var(--ink)] hover:decoration-[var(--ink)]"
-        >
-          Open shareable match page
-        </Link>
-        <Disclaimer compact />
+        </div>
       </div>
 
       {showResults ? (

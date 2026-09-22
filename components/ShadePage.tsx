@@ -1,5 +1,4 @@
 import { CopyButton } from "@/components/CopyButton";
-import { Disclaimer } from "@/components/Disclaimer";
 import { JsonLd } from "@/components/JsonLd";
 import { ShadeChip, Swatch } from "@/components/Swatch";
 import { getBrand, getShade, getShades, shadePath } from "@/lib/catalog";
@@ -96,25 +95,24 @@ export function ShadePage({ brand, code }: Props) {
             {shade.name}
           </h1>
           <p className="mt-3 font-mono text-lg text-[var(--muted)]">{shade.code}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-            <span className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1">
-              Official catalogue shade
-            </span>
-            {shade.sourceUrl ? (
-              <a
-                href={shade.sourceUrl}
-                className="underline underline-offset-4"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                View on {meta.name}
-              </a>
-            ) : null}
-          </div>
+          {shade.sourceUrl ? (
+            <a
+              href={shade.sourceUrl}
+              className="mt-4 inline-block text-sm underline underline-offset-4"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              View on {meta.name}
+            </a>
+          ) : null}
           <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-[var(--muted)]">Hex</dt>
-              <dd className="font-mono">{shade.hex}</dd>
+              <dd className="font-mono">
+                <Link href={`/hex/${hexSlug}`} className="underline underline-offset-4">
+                  {shade.hex}
+                </Link>
+              </dd>
             </div>
             <div>
               <dt className="text-[var(--muted)]">RGB</dt>
@@ -135,17 +133,8 @@ export function ShadePage({ brand, code }: Props) {
               </div>
             ) : null}
           </dl>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-5">
             <CopyButton value={shade.code} />
-            <Link
-              href={`/hex/${hexSlug}`}
-              className="text-sm underline underline-offset-4"
-            >
-              Match this hex in both brands
-            </Link>
-          </div>
-          <div className="mt-6">
-            <Disclaimer compact />
           </div>
         </div>
       </div>
@@ -171,8 +160,8 @@ export function ShadePage({ brand, code }: Props) {
                   <p className="font-mono text-xs text-[var(--muted)]">
                     {item.code}
                   </p>
-                  <p className="mt-1 text-xs">
-                    ΔE {item.deltaE.toFixed(2)} · {quality.label}
+                  <p className="mt-1 text-xs" title={quality.label}>
+                    ΔE {item.deltaE.toFixed(2)}
                   </p>
                 </Link>
               </article>

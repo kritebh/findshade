@@ -1,7 +1,5 @@
 import { ColorMatcher } from "@/components/ColorMatcher";
-import { DeltaEGuide } from "@/components/DeltaEGuide";
 import { JsonLd } from "@/components/JsonLd";
-import { catalog } from "@/lib/catalog";
 import { DEFAULT_OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/lib/site";
 import type { Metadata } from "next";
 
@@ -23,11 +21,8 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  const ap = catalog.brands["asian-paints"];
-  const bo = catalog.brands["birla-opus"];
-
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 py-12 md:py-16">
+    <div className="mx-auto w-full max-w-6xl px-5 py-8 md:py-12">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -83,23 +78,8 @@ export default function Home() {
           ],
         }}
       />
-      <section className="max-w-3xl">
-        <h1 className="font-serif text-[2.35rem] leading-[1.05] tracking-[-0.03em] text-[var(--ink)] md:text-6xl">
-          Hex, photo, or RGB → the closest paint code.
-        </h1>
-        <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
-          {ap.count.toLocaleString()} Asian Paints and {bo.count.toLocaleString()}{" "}
-          Birla Opus shades. A shortlist, not a wall match.
-        </p>
-      </section>
-
-      <div className="mt-10">
-        <ColorMatcher />
-      </div>
-
-      <div className="mt-20">
-        <DeltaEGuide />
-      </div>
+      <h1 className="sr-only">Find a shade</h1>
+      <ColorMatcher />
     </div>
   );
 }

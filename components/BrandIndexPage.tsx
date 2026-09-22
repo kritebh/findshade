@@ -1,6 +1,6 @@
 import { BrandShadeGrid } from "@/components/BrandShadeGrid";
 import { JsonLd } from "@/components/JsonLd";
-import { catalog, familyGroups, getBrand } from "@/lib/catalog";
+import { familyGroups, getBrand } from "@/lib/catalog";
 import { absoluteUrl, DEFAULT_OG_IMAGE } from "@/lib/site";
 import type { BrandId } from "@/lib/types";
 import type { Metadata } from "next";
@@ -26,8 +26,6 @@ export function brandMetadata(brand: BrandId): Metadata {
 
 export function BrandIndexPage({ brand }: { brand: BrandId }) {
   const meta = getBrand(brand);
-  const other: BrandId = brand === "asian-paints" ? "birla-opus" : "asian-paints";
-  const otherMeta = getBrand(other);
   const groups = familyGroups(brand);
 
   return (
@@ -45,11 +43,8 @@ export function BrandIndexPage({ brand }: { brand: BrandId }) {
         <Link href="/">Home</Link> / {meta.name}
       </p>
       <h1 className="mt-3 font-serif text-4xl tracking-tight md:text-5xl">
-        {meta.name} colour catalogue
+        {meta.name}
       </h1>
-      <p className="mt-4 max-w-2xl text-lg text-[var(--muted)]">
-        {meta.count.toLocaleString()} official shades, sourced {catalog.sourcedAt}.
-      </p>
       <div className="mt-6 flex flex-wrap gap-2">
         {groups.map(([family, list]) => (
           <a
@@ -69,12 +64,6 @@ export function BrandIndexPage({ brand }: { brand: BrandId }) {
       <div className="mt-10">
         <BrandShadeGrid brand={brand} groups={groups} />
       </div>
-      <p className="mt-8 text-sm text-[var(--muted)]">
-        <Link href={`/${otherMeta.path}`} className="underline">
-          Compare with {otherMeta.name}
-        </Link>
-        .
-      </p>
     </div>
   );
 }

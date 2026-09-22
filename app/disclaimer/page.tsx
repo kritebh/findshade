@@ -71,11 +71,7 @@ export default function DisclaimerPage() {
         against the current fan deck.
       </p>
       <p>
-        ΔE ranges are explained on the{" "}
-        <Link href="/#limits" className="underline underline-offset-4">
-          home page
-        </Link>
-        . Privacy practices are on the{" "}
+        Privacy practices are on the{" "}
         <Link href="/privacy" className="underline underline-offset-4">
           privacy policy
         </Link>

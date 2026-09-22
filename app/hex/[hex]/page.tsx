@@ -1,8 +1,7 @@
-import { ColorMatcher } from "@/components/ColorMatcher";
 import { JsonLd } from "@/components/JsonLd";
 import { MatchColumns } from "@/components/MatchColumns";
 import { findExactHex } from "@/lib/catalog";
-import { matchQuality, normalizeHex } from "@/lib/color";
+import { normalizeHex } from "@/lib/color";
 import { matchHex } from "@/lib/server-match";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import type { Metadata } from "next";
@@ -70,13 +69,9 @@ export default async function HexPage({
   const normalized = parseHexParam(hex);
   if (!normalized) notFound();
 
-  const matches = matchHex(normalized, 5);
+  const matches = matchHex(normalized, 4);
   const exact = findExactHex(normalized);
   const hexSlug = normalized.slice(1).toLowerCase();
-  const best = [...matches["asian-paints"], ...matches["birla-opus"]].sort(
-    (a, b) => a.deltaE - b.deltaE,
-  )[0];
-  const quality = best ? matchQuality(best.deltaE) : null;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-12">
@@ -93,24 +88,14 @@ export default async function HexPage({
           },
         }}
       />
-      <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-        <Link href="/">Home</Link> / Hex {normalized}
-      </p>
-      <div className="mt-5 grid gap-6 md:grid-cols-[200px_minmax(0,1fr)] md:items-end">
+      <div className="grid gap-6 md:grid-cols-[160px_minmax(0,1fr)] md:items-end">
         <div
-          className="h-48 rounded-[2rem] border border-black/5 md:h-56"
+          className="h-32 rounded-[2rem] border border-black/5 md:h-40"
           style={{ backgroundColor: normalized }}
         />
-        <div>
-          <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
-            Closest paint codes for {normalized}
-          </h1>
-          {quality ? (
-            <p className="mt-3 max-w-2xl text-[var(--muted)]">
-              Best digital score ΔE {best.deltaE.toFixed(2)} ({quality.label}).
-            </p>
-          ) : null}
-        </div>
+        <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
+          {normalized}
+        </h1>
       </div>
 
       {exact.length > 0 ? (
@@ -133,14 +118,6 @@ export default async function HexPage({
       <div className="mt-10">
         <MatchColumns matches={matches} />
       </div>
-      <section className="mt-14">
-        <h2 className="font-serif text-3xl tracking-tight">
-          Try another colour
-        </h2>
-        <div className="mt-6">
-          <ColorMatcher initialHex={normalized} showResults={false} />
-        </div>
-      </section>
     </div>
   );
 }

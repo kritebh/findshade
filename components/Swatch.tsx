@@ -60,7 +60,6 @@ export function MatchCard({
   hex,
   name,
   code,
-  brandLabel,
   deltaE,
   quality,
   href,
@@ -68,7 +67,6 @@ export function MatchCard({
   hex: string;
   name: string;
   code: string;
-  brandLabel: string;
   deltaE: number;
   quality: MatchQuality;
   href: string;
@@ -76,19 +74,16 @@ export function MatchCard({
   return (
     <article className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white/80 shadow-[0_18px_40px_-32px_rgba(40,24,8,0.4)] transition-transform duration-200 hover:-translate-y-0.5">
       <Link href={href} className="block">
-        <div className="h-36" style={{ backgroundColor: hex }} />
+        <div className="h-28" style={{ backgroundColor: hex }} />
       </Link>
-      <div className="space-y-2 p-4">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-          {brandLabel}
-        </p>
-        <Link href={href} className="block">
+      <div className="flex items-start justify-between gap-3 p-4">
+        <Link href={href} className="min-w-0">
           <h3 className="font-medium leading-snug text-[var(--ink)]">{name}</h3>
           <p className="font-mono text-sm text-[var(--muted)]">{code}</p>
+          <p className="mt-1 text-sm text-[var(--ink)]" title={quality.label}>
+            ΔE {deltaE.toFixed(2)}
+          </p>
         </Link>
-        <p className="text-sm text-[var(--ink)]">
-          ΔE {deltaE.toFixed(2)} · {quality.label}
-        </p>
         <CopyButton value={code} />
       </div>
     </article>
@@ -101,16 +96,19 @@ export function ShadeChip({
   code,
   href,
   note,
+  title,
 }: {
   hex: string;
   name: string;
   code: string;
   href: string;
   note?: string;
+  title?: string;
 }) {
   return (
     <Link
       href={href}
+      title={title}
       className="group flex items-center gap-3 rounded-2xl border border-transparent p-2 transition-transform duration-200 hover:-translate-y-0.5 hover:border-[var(--line)] hover:bg-white/90"
     >
       <span

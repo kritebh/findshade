@@ -126,27 +126,27 @@ export function matchQuality(deltaE: number): MatchQuality {
   if (deltaE < 2) {
     return {
       key: "very-close",
-      label: "Very close digitally",
+      label: "Very close",
       detail: "Hard to tell apart on a calibrated screen. Still sample on the wall.",
     };
   }
   if (deltaE < 5) {
     return {
       key: "close",
-      label: "Useful substitute",
+      label: "Close",
       detail: "A close digital stand-in. Check undertone in your room light.",
     };
   }
   if (deltaE < 10) {
     return {
       key: "noticeable",
-      label: "Noticeable difference",
+      label: "Noticeable",
       detail: "Same neighbourhood of colour, not a match. Compare physical cards.",
     };
   }
   return {
     key: "nearest",
-    label: "Nearest available — not a close match",
+      label: "Nearest",
     detail: "This hex sits outside typical wall-paint range, or the catalogues have no near shade.",
   };
 }

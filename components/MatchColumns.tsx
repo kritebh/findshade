@@ -20,9 +20,7 @@ export function MatchColumns({
         const meta = brandCopy[brand];
         return (
           <section key={brand}>
-            <h2 className="font-serif text-2xl text-[var(--ink)]">
-              Closest {meta.name}
-            </h2>
+            <h2 className="font-serif text-2xl text-[var(--ink)]">{meta.name}</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {matches[brand].map((item) => (
                 <MatchCard
@@ -30,7 +28,6 @@ export function MatchColumns({
                   hex={item.hex}
                   name={item.name}
                   code={item.code}
-                  brandLabel={meta.name}
                   deltaE={item.deltaE}
                   quality={item.quality}
                   href={`/${meta.path}/${item.slug}`}

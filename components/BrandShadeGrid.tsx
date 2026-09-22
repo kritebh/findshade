@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { matchQuality, normalizeHex, rankShades } from "@/lib/color";
 import type { Shade } from "@/lib/types";
 import { ShadeChip } from "./Swatch";
@@ -42,45 +41,26 @@ export function BrandShadeGrid({
     if (!hexQuery) return [];
     return rankShades(hexQuery, allShades, 12);
   }, [allShades, hexQuery]);
-  const exactHex = Boolean(
-    hexQuery && allShades.some((shade) => shade.hex === hexQuery),
-  );
-
   const shownCount = hexQuery
     ? hexMatches.length
     : textFiltered.reduce((sum, [, shades]) => sum + shades.length, 0);
 
   return (
     <div className="space-y-10">
-      <label className="block max-w-md">
-        <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-          Search this catalogue
-        </span>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Name, code, or hex like #C19E76"
-          className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-base"
-        />
-      </label>
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Name, code, or hex"
+        aria-label="Search this catalogue"
+        className="w-full max-w-md rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-base"
+      />
 
       {hexQuery ? (
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-serif text-2xl text-[var(--ink)]">
-                Closest to {hexQuery}
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">
-                {exactHex ? "Exact hex in this catalogue. " : null}
-                <Link
-                  href={`/hex/${hexQuery.slice(1).toLowerCase()}`}
-                  className="underline"
-                >
-                  Compare both brands
-                </Link>
-              </p>
-            </div>
+            <h2 className="font-serif text-2xl text-[var(--ink)]">
+              {hexQuery}
+            </h2>
             <span
               className="h-10 w-10 rounded-lg border border-black/10"
               style={{ backgroundColor: hexQuery }}
@@ -97,7 +77,8 @@ export function BrandShadeGrid({
                   name={item.name}
                   code={item.code}
                   href={`/${brand}/${item.slug}`}
-                  note={`ΔE ${item.deltaE.toFixed(2)} · ${quality.label}`}
+                  note={`ΔE ${item.deltaE.toFixed(2)}`}
+                  title={quality.label}
                 />
               );
             })}
@@ -130,16 +111,14 @@ export function BrandShadeGrid({
       )}
 
       {!hexQuery && needle && shownCount === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          No names or codes match “{needle}”. Paste a hex such as #C19E76 to
-          find the closest shade in this catalogue.
-        </p>
+        <p className="text-sm text-[var(--muted)]">No matches for “{needle}”.</p>
       ) : null}
 
-      <p className="text-sm text-[var(--muted)]">
-        Showing {shownCount.toLocaleString()} of {total.toLocaleString()}{" "}
-        shades.
-      </p>
+      {needle ? (
+        <p className="text-sm text-[var(--muted)]">
+          {shownCount.toLocaleString()} of {total.toLocaleString()}
+        </p>
+      ) : null}
     </div>
   );
 }

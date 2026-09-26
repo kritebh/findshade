@@ -75,7 +75,7 @@ export default function AboutPage() {
           .
         </p>
         <p>
-          Developed with love by{" "}
+          Developed with ❤️ by{" "}
           <a
             href={AUTHOR_GITHUB}
             className="underline underline-offset-4"
@@ -91,7 +91,7 @@ export default function AboutPage() {
             className="underline underline-offset-4"
             rel="noopener noreferrer"
           >
-            GitHub — {AUTHOR_GITHUB.replace("https://", "")}
+            GitHub
           </a>
         </p>
       </LegalPage>
